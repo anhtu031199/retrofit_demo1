@@ -16,29 +16,59 @@ import retrofit2.converter.gson.GsonConverterFactory
 
 class MainActivity : AppCompatActivity(){
 
-
+    private var weatherData: TextView? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        weatherData = findViewById(R.id.textview)
+        getCurrentData()
 
-        val apiInterface = ApiInterface.create().getpeople()
-        apiInterface.enqueue(object : Callback<List<People>>{
-            override fun onResponse(call: Call<List<People>>, response: Response<List<People>>) {
+    }
+    internal fun getCurrentData() {
+        val retrofit = Retrofit.Builder()
+            .baseUrl(BaseUrl)
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+        val service = retrofit.create(WeatherService::class.java)
+        val call = service.getCurrentWeatherData(lat, lon,"metric", AppId)
+        call.enqueue(object : Callback<WeatherResponse> {
+            override fun onResponse(call: Call<WeatherResponse>, response: Response<WeatherResponse>) {
+                if (response.code() == 200) {
+                    val weatherResponse = response.body()!!
 
-                if(response?.body() != null)
-                {
-                    findViewById<TextView>(R.id.textview).text = response.body()!![0].address
+                    val stringBuilder = "Location: " +
+                            weatherResponse.name!! +
+                            "\n" +
+                            "Temperature: " +
+                            weatherResponse.main!!.temp +
+                            "\n" +
+                            "Temperature(Min): " +
+                            weatherResponse.main!!.temp_min +
+                            "\n" +
+                            "Temperature(Max): " +
+                            weatherResponse.main!!.temp_max +
+                            "\n" +
+                            "Humidity: " +
+                            weatherResponse.main!!.humidity +
+                            "\n" +
+                            "Pressure: " +
+                            weatherResponse.main!!.pressure
+
+                    weatherData!!.text = stringBuilder
                 }
             }
 
-            override fun onFailure(call: Call<List<People>>, t: Throwable) {
-
-                findViewById<TextView>(R.id.textview).text = t.message.toString()
-                Log.e("RETROFIT_ERROR", t.message.toString())
+            override fun onFailure(call: Call<WeatherResponse>, t: Throwable) {
+                weatherData!!.text = t.message
             }
-
         })
+    }
+    companion object {
 
+        var BaseUrl = "http://api.openweathermap.org/"
+        var AppId = "3b9699d496cb5bfe74fb3952c4ba5aff"
+        var lat = "21.08785"
+        var lon = "105.66642"
 
     }
 
